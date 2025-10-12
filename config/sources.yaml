@@ -1,0 +1,109 @@
+# Bot Configuration Settings
+
+# Santa Monica College Location
+# Main campus: 1900 Pico Blvd, Santa Monica, CA 90405
+smc:
+  name: "Santa Monica College"
+  address: "1900 Pico Blvd, Santa Monica, CA 90405"
+  latitude: 34.0168
+  longitude: -118.4695
+
+# Filtering Rules
+filtering:
+  # Maximum distance for internships (in miles)
+  internship_radius_miles: 40
+
+  # Whether to include remote opportunities
+  include_remote: true
+
+  # Remote opportunities location requirements
+  remote_requirements:
+    - "United States"
+    - "US-based"
+    - "USA"
+
+# Posting Configuration
+posting:
+  # How many opportunities to post per cycle
+  min_opportunities: 5
+  max_opportunities: 8
+
+  # Posting frequency (in days)
+  frequency_days: 3
+
+  # Whether to allow duplicate posting (should always be false)
+  allow_duplicates: false
+
+# Scoring Weights (0-100, higher = more important)
+scoring:
+  distance_weight: 40        # Closer to SMC = higher score
+  recency_weight: 20         # More recent postings = higher score
+  cc_friendly_weight: 25     # Community college friendly = higher score
+  brand_weight: 15           # Known companies = higher score
+
+# Brand Recognition (companies to give bonus points)
+brand_companies:
+  tier_1:  # +15 points
+    - "Riot Games"
+    - "Snap Inc"
+    - "Netflix"
+    - "SpaceX"
+    - "Google"
+    - "Meta"
+    - "Amazon"
+    - "Microsoft"
+
+  tier_2:  # +10 points
+    - "GoodRx"
+    - "ZipRecruiter"
+    - "Spotify"
+    - "Hulu"
+    - "Bird"
+    - "LA County"
+    - "City of Santa Monica"
+
+  tier_3:  # +5 points
+    - "Startups"
+    - "Local Government"
+
+# API Rate Limiting
+rate_limiting:
+  # Delay between requests (in seconds)
+  default_delay: 1.0
+
+  # Nominatim/OSM geocoding (strict: max 1 req/sec)
+  geocoding_delay: 1.2
+
+  # Maximum retries for failed requests
+  max_retries: 3
+
+  # Retry backoff multiplier
+  retry_backoff: 2
+
+# OpenAI Configuration
+openai:
+  model: "gpt-4o"
+
+  # Temperature for classification (lower = more deterministic)
+  temperature: 0.3
+
+  # Max tokens for classification response
+  max_tokens: 500
+
+  # Whether to use structured outputs (should always be true)
+  use_structured_outputs: true
+
+# Database Configuration
+database:
+  path: "data/opportunities.db"
+
+  # How long to keep old opportunities (in days)
+  retention_days: 90
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  file: "logs/bot.log"
+  max_bytes: 10485760  # 10MB
+  backup_count: 5
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
