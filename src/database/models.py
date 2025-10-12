@@ -1,0 +1,316 @@
+"""
+Data models for the SMC CS Opportunities Bot.
+
+Defines dataclasses for all entities stored in the database,
+providing type-safe access to opportunity, post, and cache data.
+"""
+
+import json
+import uuid
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import List, Optional
+
+
+@dataclass
+class Opportunity:
+    """
+    Represents a CS opportunity (internship, hackathon, or event).
+
+    This is the core data model for opportunities from all sources.
+    """
+
+    # Required fields
+    source: str  # greenhouse, lever, ashby, usajobs, mlh
+    source_id: str  # unique ID from the source
+    title: str
+    company: str
+    type: str  # internship, hackathon, event
+    url: str
+    first_seen: str  # ISO 8601 datetime
+    last_seen: str  # ISO 8601 datetime
+    hash: str  # deduplication hash
+
+    # Auto-generated fields
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+
+    # Optional/nullable fields
+    workplace_type: Optional[str] = None  # on-site, hybrid, remote
+    location_text: Optional[str] = None
+    lat: Optional[float] = None
+    lon: Optional[float] = None
+    distance_km: Optional[float] = None
+    is_local: bool = False
+    deadline: Optional[str] = None  # ISO 8601 date
+    posted_at: Optional[str] = None  # when opportunity was originally posted by company
+    description_raw: Optional[str] = None
+
+    # LLM-generated fields
+    summary_bullets: Optional[List[str]] = None
+    cc_friendly: bool = False
+    cc_reason: Optional[str] = None
+
+    # Ranking
+    score: float = 0.0
+
+    created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for database insertion."""
+        # Convert summary_bullets list to JSON string
+        summary_json = None
+        if self.summary_bullets:
+            summary_json = json.dumps(self.summary_bullets)
+
+        return {
+            "id": self.id,
+            "source": self.source,
+            "source_id": self.source_id,
+            "title": self.title,
+            "company": self.company,
+            "type": self.type,
+            "workplace_type": self.workplace_type,
+            "location_text": self.location_text,
+            "lat": self.lat,
+            "lon": self.lon,
+            "distance_km": self.distance_km,
+            "is_local": 1 if self.is_local else 0,
+            "url": self.url,
+            "deadline": self.deadline,
+            "posted_at": self.posted_at,
+            "description_raw": self.description_raw,
+            "summary_bullets": summary_json,
+            "cc_friendly": 1 if self.cc_friendly else 0,
+            "cc_reason": self.cc_reason,
+            "first_seen": self.first_seen,
+            "last_seen": self.last_seen,
+            "hash": self.hash,
+            "score": self.score,
+            "created_at": self.created_at,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Opportunity":
+        """Create an Opportunity from a dictionary (e.g., from database row)."""
+        # Parse summary_bullets from JSON string
+        summary_bullets = None
+        if data.get("summary_bullets"):
+            try:
+                summary_bullets = json.loads(data["summary_bullets"])
+            except json.JSONDecodeError:
+                summary_bullets = None
+
+        return cls(
+            id=data["id"],
+            source=data["source"],
+            source_id=data["source_id"],
+            title=data["title"],
+            company=data["company"],
+            type=data["type"],
+            workplace_type=data.get("workplace_type"),
+            location_text=data.get("location_text"),
+            lat=data.get("lat"),
+            lon=data.get("lon"),
+            distance_km=data.get("distance_km"),
+            is_local=bool(data.get("is_local", 0)),
+            url=data["url"],
+            deadline=data.get("deadline"),
+            posted_at=data.get("posted_at"),
+            description_raw=data.get("description_raw"),
+            summary_bullets=summary_bullets,
+            cc_friendly=bool(data.get("cc_friendly", 0)),
+            cc_reason=data.get("cc_reason"),
+            first_seen=data["first_seen"],
+            last_seen=data["last_seen"],
+            hash=data["hash"],
+            score=data.get("score", 0.0),
+            created_at=data.get("created_at", datetime.utcnow().isoformat()),
+        )
+
+    @classmethod
+    def from_row(cls, row) -> "Opportunity":
+        """Create an Opportunity from a SQLite Row object."""
+        return cls.from_dict(dict(row))
+
+
+@dataclass
+class Post:
+    """
+    Represents a Discord post record.
+
+    Tracks what opportunities have been posted to Discord and when.
+    """
+
+    opportunity_id: str
+    posted_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    discord_message_id: Optional[str] = None
+    channel_id: Optional[str] = None
+    id: Optional[int] = None  # Auto-generated by database
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for database insertion."""
+        return {
+            "opportunity_id": self.opportunity_id,
+            "posted_at": self.posted_at,
+            "discord_message_id": self.discord_message_id,
+            "channel_id": self.channel_id,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Post":
+        """Create a Post from a dictionary."""
+        return cls(
+            id=data.get("id"),
+            opportunity_id=data["opportunity_id"],
+            posted_at=data.get("posted_at", datetime.utcnow().isoformat()),
+            discord_message_id=data.get("discord_message_id"),
+            channel_id=data.get("channel_id"),
+        )
+
+    @classmethod
+    def from_row(cls, row) -> "Post":
+        """Create a Post from a SQLite Row object."""
+        return cls.from_dict(dict(row))
+
+
+@dataclass
+class GeocodeCache:
+    """
+    Represents a cached geocoding result.
+
+    Stores location → (lat, lon) mappings to minimize API calls.
+    """
+
+    location_text: str
+    lat: float
+    lon: float
+    cached_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for database insertion."""
+        return {
+            "location_text": self.location_text,
+            "lat": self.lat,
+            "lon": self.lon,
+            "cached_at": self.cached_at,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "GeocodeCache":
+        """Create a GeocodeCache from a dictionary."""
+        return cls(
+            location_text=data["location_text"],
+            lat=data["lat"],
+            lon=data["lon"],
+            cached_at=data.get("cached_at", datetime.utcnow().isoformat()),
+        )
+
+    @classmethod
+    def from_row(cls, row) -> "GeocodeCache":
+        """Create a GeocodeCache from a SQLite Row object."""
+        return cls.from_dict(dict(row))
+
+
+@dataclass
+class Source:
+    """
+    Represents an API source tracking record.
+
+    Tracks fetch history and errors for each API source.
+    """
+
+    source_type: str  # greenhouse, lever, ashby, usajobs, mlh
+    source_key: str  # company name or identifier
+    last_fetched: Optional[str] = None  # ISO 8601 datetime
+    fetch_count: int = 0
+    last_error: Optional[str] = None
+    id: Optional[int] = None  # Auto-generated by database
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for database insertion."""
+        return {
+            "source_type": self.source_type,
+            "source_key": self.source_key,
+            "last_fetched": self.last_fetched,
+            "fetch_count": self.fetch_count,
+            "last_error": self.last_error,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Source":
+        """Create a Source from a dictionary."""
+        return cls(
+            id=data.get("id"),
+            source_type=data["source_type"],
+            source_key=data["source_key"],
+            last_fetched=data.get("last_fetched"),
+            fetch_count=data.get("fetch_count", 0),
+            last_error=data.get("last_error"),
+        )
+
+    @classmethod
+    def from_row(cls, row) -> "Source":
+        """Create a Source from a SQLite Row object."""
+        return cls.from_dict(dict(row))
+
+
+if __name__ == "__main__":
+    # Test data models
+    print("=== Testing Data Models ===\n")
+
+    # Create a test opportunity
+    opp = Opportunity(
+        source="greenhouse",
+        source_id="12345",
+        title="Software Engineering Intern",
+        company="Riot Games",
+        type="internship",
+        url="https://example.com/job/12345",
+        workplace_type="on-site",
+        location_text="Los Angeles, CA",
+        lat=34.0522,
+        lon=-118.2437,
+        distance_km=13.2,
+        is_local=True,
+        summary_bullets=[
+            "Work on production systems",
+            "Mentorship from senior engineers",
+            "Great for students",
+        ],
+        cc_friendly=True,
+        cc_reason="Accepts undergrads with 2+ years experience",
+        first_seen=datetime.utcnow().isoformat(),
+        last_seen=datetime.utcnow().isoformat(),
+        hash="abc123",
+        score=85.5,
+    )
+
+    print("Opportunity created:")
+    print(f"  ID: {opp.id}")
+    print(f"  Title: {opp.title}")
+    print(f"  Company: {opp.company}")
+    print(f"  Distance: {opp.distance_km} km")
+    print(f"  CC-Friendly: {opp.cc_friendly}")
+
+    # Test serialization
+    opp_dict = opp.to_dict()
+    print(f"\nSerialized to dict with {len(opp_dict)} fields")
+
+    # Test deserialization
+    opp_restored = Opportunity.from_dict(opp_dict)
+    print(f"\nRestored from dict:")
+    print(f"  ID matches: {opp.id == opp_restored.id}")
+    print(f"  Summary bullets restored: {len(opp_restored.summary_bullets) == 3}")
+
+    # Test GeocodeCache
+    cache = GeocodeCache(
+        location_text="Santa Monica, CA",
+        lat=34.0195,
+        lon=-118.4912,
+    )
+    print(f"\n\nGeocodeCache created:")
+    print(f"  Location: {cache.location_text}")
+    print(f"  Coordinates: ({cache.lat}, {cache.lon})")
+    print(f"  Cached at: {cache.cached_at}")
+
+    print("\n✓ All data models working correctly")
