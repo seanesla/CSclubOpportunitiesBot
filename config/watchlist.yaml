@@ -1,0 +1,32 @@
+# Company watchlist for ATS APIs
+# Add company identifiers/slugs for each ATS platform
+
+# Greenhouse Job Board API
+# Format: company token used in boards-api.greenhouse.io/v1/boards/{token}/jobs
+greenhouse:
+  - riotgames        # Riot Games - West LA
+  - snapinc          # Snap Inc. - Santa Monica
+  - goodrx           # GoodRx - Santa Monica
+  - ziprecruiter     # ZipRecruiter - Santa Monica
+  - bird             # Bird (if still active) - Santa Monica
+  # Add more LA/Santa Monica companies using Greenhouse
+
+# Lever Postings API
+# Format: company site name used in api.lever.co/v0/postings/{site}
+lever:
+  - netflix          # Netflix - Los Gatos (Bay Area but relevant)
+  - spotify          # Spotify - LA office
+  # Add more companies using Lever
+
+# Ashby Job Postings API
+# Format: organization identifier for Ashby API
+ashby:
+  # Add Ashby organization identifiers here
+  # Many modern startups are moving to Ashby
+  # Format may vary - check Ashby API documentation
+
+# Notes:
+# - This is a starter list focused on LA/Silicon Beach area
+# - Verify each company token by testing API endpoints
+# - Update regularly as companies change ATS platforms
+# - Remove entries if companies no longer use that ATS
